@@ -26,7 +26,7 @@ description = '''the greatest bot in the world'''
 cmdPrefix = '!'
 bot = commands.Bot(command_prefix=cmdPrefix, description=description)
 #client = discord.Client()
-print(discord.utils.oauth_url(172824506505756672,discord.Permissions.general()))
+
 
 
 aliasfile = open('alias.json')
