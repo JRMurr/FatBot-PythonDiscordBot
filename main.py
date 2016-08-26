@@ -23,19 +23,22 @@ initial_extensions = [
     'cogs.memes',
     'cogs.quotes'
 ]
+try:
+    configDict = json.load(open('config.json'))
+except Exception as e:
+    configDict = {}
+
+try:
+    aliasDict = json.load(open('alias.json'))
+except Exception as e:
+    aliasDict = {}
 
 description = '''the greatest bot in the world'''
-cmdPrefix = '!'
+cmdPrefix ="!"
+if configDict['cmdPrefix']:
+    cmdPrefix = configDict['cmdPrefix']
 bot = commands.Bot(command_prefix=cmdPrefix, description=description)
-#client = discord.Client()
 
-aliasfile = open('alias.json')
-aliasDict = json.load(aliasfile)
-
-#aliasDict = {}
-
-configFile = open('config.json')
-configDict = json.load(configFile)
 
 respondToOwner = False
 ownerResponses = ['Can do daddy','Sure thing pops','Anything for you dad','Right away father','Yes sir','Fine']
@@ -311,7 +314,7 @@ async def on_message(message):
 
                 #msg1, msg2 stuff
                 if msg1 is None:
-                    #both will be none since msg2 will only have stuff is msg1 is not none
+                    #both will be none since msg2 will only have a time is msg1 is not none
                     msg1 = currentTime
                 elif msg2 is None:
                     msg2 = currentTime
@@ -323,10 +326,10 @@ async def on_message(message):
                 timeStamps.update({'msg1':msg1,'msg2':msg2})
 
 
-                #check diff of msg1 and msg2 to see if they were sent in under 5 secs
+                #check diff of msg1 and msg2 to see if they were sent in under 3 secs
                 if msg1 is not None and msg2 is not None:
                     diff = abs(msg1 - msg2)
-                    if diff.total_seconds() < 5:
+                    if diff.total_seconds() < 3:
                         timeStamps.update({'timeoutStart':currentTime})
                         userLastCommand.update({message.author:timeStamps})
             else:

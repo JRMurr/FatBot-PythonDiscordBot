@@ -4,8 +4,11 @@ from .utils import checks
 from urllib.request import urlopen
 import json
 import time, threading
+try:
+    streamers = json.load(open('streamers.json'))
+except Exception as e:
+    streamers = {}
 
-streamers = json.load(open('streamers.json'))
 
 def get_twitch_response(twitchName):
     url = "https://api.twitch.tv/kraken/streams/" + twitchName
