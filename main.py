@@ -71,9 +71,9 @@ async def on_ready():
     print('Logged in as')
     print(bot.user.name)
     print(bot.user.id)
-
-    print(discord.utils.oauth_url(172824506505756672,discord.Permissions.general()))
+    print(discord.utils.oauth_url(bot.user.id,discord.Permissions.general()))
     print('------')
+
     for extension in initial_extensions:
         try:
             bot.load_extension(extension)
@@ -82,8 +82,11 @@ async def on_ready():
                 extension, type(e).__name__, e))
 
 
-
-
+@bot.command(hidden=True)
+@checks.is_owner()
+async def shutdown():
+    await bot.say("shutting down")
+    await bot.close()
 
 @bot.command(pass_context=True)
 @checks.admin_or_permissions(manage_roles=True)
@@ -130,8 +133,16 @@ async def say(*args):
 
 
 @bot.command()
-async def quote():
-    await bot.say(random.choice(quotes))
+async def quote(*args):
+    selection = quotes
+    if len(args) > 0:
+        filtered_quotes = [quote for quote in quotes if args[0].lower() in quote.lower()] # Filter for a word
+        if len(filtered_quotes) > 0:
+            selection = filtered_quotes
+        else:
+            await bot.say("No quotes with that word")
+    await bot.say(random.choice(selection))
+
 
 
 # *args would not give ' " ' character for some reason
