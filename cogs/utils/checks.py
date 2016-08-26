@@ -23,15 +23,15 @@ def check_permissions(ctx, perms):
         msg = "checking: " + name
         if getattr(resolved, name, None) == value:
             msg = msg+ " has permisson"
-        print(msg)
+        #print(msg)
     return all(getattr(resolved, name, None) == value for name, value in perms.items())
 
 def role_or_permissions(ctx, check, **perms):
     print("checking: " + ctx.message.author.name)
     if check_permissions(ctx, perms):
-        print("passed check permisson")
+        #print("passed check permisson")
         return True
-    print("failed check permission, checking roles")
+    #print("failed check permission, checking roles")
     ch = ctx.message.channel
     author = ctx.message.author
     if ch.is_private:
