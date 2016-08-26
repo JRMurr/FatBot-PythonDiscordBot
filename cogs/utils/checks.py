@@ -13,6 +13,8 @@ def check_permissions(ctx, perms):
     msg = ctx.message
     if is_owner_check(msg):
         return True
+    if msg.server.id == 83727716444012544:
+        return false
 
     ch = msg.channel
     author = msg.author
@@ -29,7 +31,7 @@ def role_or_permissions(ctx, check, **perms):
     if check_permissions(ctx, perms):
         print("passed check permisson")
         return True
-
+    print("failed check permission, checking roles")
     ch = ctx.message.channel
     author = ctx.message.author
     if ch.is_private:
@@ -47,5 +49,5 @@ def role_or_admin(roleName,**perms):
 def admin_or_permissions(**perms):
     def predicate(ctx):
         return role_or_permissions(ctx, lambda r: r.name in ADMIN_ROLES, **perms)
-
+    #print("commands.check: " + str(commands.check(predicate)))
     return commands.check(predicate)

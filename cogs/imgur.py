@@ -64,12 +64,13 @@ class imgurCog:
         if len(args) < 1:
             msg = "albums: "
             for album in imgurClient.get_account_albums('me'):
-                msg = msg + album.title+','
+                msg = msg + str(album.title)+','
             await self.bot.say(msg)
             return
 
         albumName = args[0].lower()
         for album in imgurClient.get_account_albums('me'):
+            #print("albumName: " + albumName + " title" + album.title)
             if albumName == album.title.lower():
                 images = imgurClient.get_album_images(album.id)
                 await self.bot.say(random.choice(images).link)

@@ -15,19 +15,18 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w'
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-
 initial_extensions = [
     'cogs.imgur',
     'cogs.youtube',
-    'cogs.twitch'
+    'cogs.twitch',
+    'cogs.polls',
+    'cogs.memes'
 ]
 
 description = '''the greatest bot in the world'''
 cmdPrefix = '!'
 bot = commands.Bot(command_prefix=cmdPrefix, description=description)
 #client = discord.Client()
-
-
 
 aliasfile = open('alias.json')
 aliasDict = json.load(aliasfile)
@@ -36,19 +35,44 @@ quotefile = open('quotes.json')
 quotes = json.load(quotefile)
 #aliasDict = {}
 
-respondToOwner = True
+configFile = open('config.json')
+configDict = json.load(configFile)
+
+respondToOwner = False
 ownerResponses = ['Can do daddy','Sure thing pops','Anything for you dad','Right away father','Yes sir','Fine']
+
+#channels where its ok to spam
+try:
+    whiteListedChannels = json.load(open('whitelist.json'))
+except Exception as e:
+    whiteListedChannels = []
+
 
 try:
     keyWords = json.load(open('keyWords.json'))
 except Exception as e:
     keyWords = {}
 
+
+import linecache
+import sys
+
+def getExceptionString():
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    linecache.checkcache(filename)
+    line = linecache.getline(filename, lineno, f.f_globals)
+    return 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
+
 @bot.event
 async def on_ready():
     print('Logged in as')
     print(bot.user.name)
     print(bot.user.id)
+
+    print(discord.utils.oauth_url(172824506505756672,discord.Permissions.general()))
     print('------')
     for extension in initial_extensions:
         try:
@@ -58,16 +82,14 @@ async def on_ready():
                 extension, type(e).__name__, e))
 
 
-@bot.command(description='For when you wanna settle the score some other way')
-async def choose(*choices: str):
-    """Chooses between multiple choices."""
-    print('choose')
-    await bot.say(random.choice(choices))
+
 
 
 @bot.command(pass_context=True)
 @checks.admin_or_permissions(manage_roles=True)
+#@checks.role_or_admin('Lord of Albums',manage_roles=True)
 async def alias(ctx):
+
     """Creates a alias command
 
         ex: !alias sayHi say hi"""
@@ -93,6 +115,12 @@ async def alias(ctx):
         with open('alias.json', 'w') as fp:
             json.dump(aliasDict, fp,indent=4)
         await bot.say("Created alias " + name)
+
+
+@bot.command(description='For when you wanna settle the score some other way')
+async def choose(*choices: str):
+    """Chooses between multiple choices."""
+    await bot.say(random.choice(choices))
 
 
 @bot.command()
@@ -174,6 +202,8 @@ async def load(*, module: str):
     module = module.strip()
     try:
         bot.load_extension(module)
+    # except:
+    #     await bot.say(getExceptionString())
     except Exception as e:
         await bot.say('\U0001f52b')
         await bot.say('{}: {}'.format(type(e).__name__, e))
@@ -275,22 +305,100 @@ async def toggle_owner_response():
 
 
 
+@bot.command(pass_context=True)
+@checks.admin_or_permissions(manage_roles=True)
+async def channel_whitelist(ctx,isWhitelist: bool):
+    channel = ctx.message.channel
+    print("poo")
+    if not isWhitelist and channel in whiteListedChannels:
+        whiteListedChannels.remove(channel.id)
+        await bot.say("removed channel from whitelist")
+    elif isWhitelist and channel not in whiteListedChannels:
+        whiteListedChannels.append(channel.id)
+        await bot.say("added channel to whitelist")
+    with open('whitelist.json', 'w') as fp:
+                    json.dump(whiteListedChannels, fp,indent=4)
+
+
+@bot.command()
+async def list_commands():
+    txt = "commands: {}".format(list(bot.commands.keys()) + list(aliasDict.keys()))
+    await bot.say(txt[:2000])
+#key user id -> dict with timestamp of last message in a channel that cares, and timeout start timestamp
+userLastCommand = {}
 
 @bot.event
 async def on_message(message):
     global respondToOwner
-
+    #print(str(userLastCommand))
+    deleteMessage = False
+    workingMessage = copy.copy(message) #will use to make changes to the message so orignal message can still be used in func calls
     if message.author == bot.user:
         return
-    if respondToOwner and checks.is_owner_check(message)and message.content.startswith(cmdPrefix):
+    if respondToOwner and checks.is_owner_check(message)and workingMessage.content.startswith(cmdPrefix):
         await bot.send_message(message.channel,random.choice(ownerResponses))
 
+    if workingMessage.content.lower().endswith("-del"):
+        deleteMessage = True
+        workingMessage.content = message.content[:-4].strip()
 
-    await bot.process_commands(message)
+    if workingMessage.content.startswith(cmdPrefix):
+        #print("processing " + message.content)
+        botCommands = list(bot.commands.keys()) + list(aliasDict.keys())
 
-    if message.content.startswith(cmdPrefix):
-        print("processing " + message.content)
-        msg = copy.copy(message)
+        msg = copy.copy(workingMessage)
+        passedCMD = msg.content.split(' ')[0]
+        passedCMD = passedCMD[len(cmdPrefix)::]
+
+        #check = lambda r: r.name == 'manage_roles'
+        #role = discord.utils.find(check, message.author.roles)
+        roles = message.author.permissions_in(message.channel)
+        print("roles {}".format(roles))
+        if passedCMD in botCommands and message.channel.id not in whiteListedChannels and not roles.manage_roles:
+            #command ran is an actual commands or alias
+            currentTime = message.timestamp
+            if message.author in userLastCommand:
+                timeStamps = userLastCommand[message.author]
+                msg1 = timeStamps['msg1']
+                msg2 = timeStamps['msg2']
+                timeoutStart = timeStamps['timeoutStart']
+                if timeoutStart is not None:
+                    diff = currentTime - timeoutStart
+                    if diff.total_seconds() < 30:
+                        await bot.send_message(message.author, "You're in timeout, no memes for {} secs".format(30 - diff.total_seconds()))
+                        return
+                    else:
+                        timeStamps.update({'timeoutStart':None})
+                        userLastCommand.update({message.author:timeStamps})
+
+                #msg1, msg2 stuff
+                if msg1 is None:
+                    #both will be none since msg2 will only have stuff is msg1 is not none
+                    msg1 = currentTime
+                elif msg2 is None:
+                    msg2 = currentTime
+                elif (msg1 - msg2).total_seconds() > 0:
+                    #msg1 is newer
+                    msg2 = currentTime
+                else:
+                    msg1 = currentTime
+                timeStamps.update({'msg1':msg1,'msg2':msg2})
+
+
+                #check diff of msg1 and msg2 to see if they were sent in under 5 secs
+                if msg1 is not None and msg2 is not None:
+                    diff = abs(msg1 - msg2)
+                    if diff.total_seconds() < 5:
+                        timeStamps.update({'timeoutStart':currentTime})
+                        userLastCommand.update({message.author:timeStamps})
+            else:
+                timeStamps = {"msg1":None,"msg2":None,"timeoutStart":None}
+                userLastCommand.update({message.author:timeStamps})
+
+        #'real' command
+        await bot.process_commands(workingMessage)
+
+        msg = copy.copy(workingMessage)
         alias = msg.content.split(' ')[0]
         # remove prefix
         alias = alias[len(cmdPrefix)::]
@@ -298,21 +406,9 @@ async def on_message(message):
             msg.content = cmdPrefix + aliasDict[alias][0] + " " + aliasDict[alias][1]
             print("running alias: " + msg.content)
             await bot.process_commands(msg)
-    elif message.content.lower() in keyWords:
+    elif workingMessage.content.lower() in keyWords:
         await bot.send_message(message.channel,keyWords[message.content.lower()])
-    # if message.content.startswith('~test'):
-    #     counter = 0
-    #     tmp = await bot.send_message(message.channel, 'Calculating messages...')
-    #     async for log in bot.logs_from(message.channel, limit=100):
-    #         if log.author == message.author:
-    #             counter += 1
-    #
-    #     await bot.edit_message(tmp, 'You have {} messages.'.format(counter))
-    # elif message.content.startswith('!sleep'):
-    #     await asyncio.sleep(5)
-    #     await bot.send_message(message.channel, 'Done sleeping')
-    # elif message.content.startswith('~workpls'):
-    #     await bot.send_message(message.channel,'work you fucking bot')
+    if deleteMessage:
+        await bot.delete_message(message)
 
-
-bot.run('TOKEN')
+bot.run(configDict['discord_id'])
