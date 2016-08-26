@@ -143,8 +143,6 @@ async def quote(*args):
             await bot.say("No quotes with that word")
     await bot.say(random.choice(selection))
 
-
-
 # *args would not give ' " ' character for some reason
 @bot.command(pass_context=True)
 async def savequote(ctx):
