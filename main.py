@@ -95,7 +95,7 @@ async def alias(ctx):
     """Creates a alias command
 
         ex: !alias sayHi say hi"""
-    print("makeing alias")
+    #print("makeing alias")
     args = ctx.message.content.split(' ')
     if len(args) <= 2:  # need alias, new name, and at least the 'real' command
         await bot.say("Usage: {0}alias <aliasname> <cmd with arguments>".format(cmdPrefix))
@@ -247,7 +247,7 @@ async def toggle_owner_response():
 @checks.admin_or_permissions(manage_roles=True)
 async def channel_whitelist(ctx,isWhitelist: bool):
     channel = ctx.message.channel
-    print("poo")
+    #print("poo")
     if not isWhitelist and channel in whiteListedChannels:
         whiteListedChannels.remove(channel.id)
         await bot.say("removed channel from whitelist")
@@ -291,7 +291,7 @@ async def on_message(message):
         #check = lambda r: r.name == 'manage_roles'
         #role = discord.utils.find(check, message.author.roles)
         roles = message.author.permissions_in(message.channel)
-        print("roles {}".format(roles))
+        #print("roles {}".format(roles))
         if passedCMD in botCommands and message.channel.id not in whiteListedChannels and not roles.manage_roles:
             #command ran is an actual commands or alias
             currentTime = message.timestamp
@@ -342,7 +342,7 @@ async def on_message(message):
         alias = alias[len(cmdPrefix)::]
         if alias in aliasDict:
             msg.content = cmdPrefix + aliasDict[alias][0] + " " + aliasDict[alias][1]
-            print("running alias: " + msg.content)
+            #print("running alias: " + msg.content)
             await bot.process_commands(msg)
     elif workingMessage.content.lower() in keyWords:
         await bot.send_message(message.channel,keyWords[message.content.lower()])
