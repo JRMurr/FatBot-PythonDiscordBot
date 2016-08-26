@@ -102,8 +102,15 @@ async def say(*args):
 
 
 @bot.command()
-async def quote():
-    await bot.say(random.choice(quotes))
+async def quote(*args):
+    selection = quotes
+    if len(args) > 0:
+        filtered_quotes = [quote for quote in quotes if args[0].lower() in quote.lower()] # Filter for a word
+        if len(filtered_quotes) > 0:
+            selection = filtered_quotes
+        else:
+            await bot.say("No quotes with that word")
+    await bot.say(random.choice(selection))
 
 
 # *args would not give ' " ' character for some reason
