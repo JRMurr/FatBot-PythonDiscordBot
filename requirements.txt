@@ -1,0 +1,10 @@
+discord.py
+
+#######imgur#######
+imgurpython
+
+########memes.py#######
+emoji
+
+#######youtube#######
+httplib2
