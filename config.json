@@ -1,8 +1,0 @@
-{
-  "cmdPrefix": "$",
-  "discord_id": "BOT TOKEN HERE",
-  "imgur_client_id":"text",
-  "imgur_client_secret":"text",
-  "imgur_access_token" : "text",
-  "imgur_refresh_token": "text"
-}
