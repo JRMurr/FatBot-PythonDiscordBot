@@ -6,8 +6,8 @@ import random
 import re
 
 FILE_NAME = 'quotes.json'
-INPUT_REGEX = re.compile(r'"(.+)" \- (\S+\s*)+')
-OUTPUT_FORMAT = '"{quote}" - {source}' # Quote - source
+INPUT_REGEX = re.compile(r'"(.+)" \- ((\S+\s*)+)')
+OUTPUT_FORMAT = '"{}" - {}' # Quote - source
 LIST_FORMAT = "\n{} - "
 MAX_WHISPER_LENGTH = 1500
 
@@ -27,17 +27,8 @@ def save_quotes():
     except Exception as e:
         print("Error saving quotes")
 
-new_quotes = []
-for quote in quotes:
-    match = INPUT_REGEX.match(quote)
-    if match:
-        new_quotes.append((match.group(1), match.group(2))) # List of (quote, source)
-
-
-try:
-    json.dump(new_quotes, open(FILE_NAME, 'w'), indent=4)
-except Exception as e:
-    print("Error saving quotes")
+def format_quote(quote):
+    return OUTPUT_FORMAT.format(quote[0], quote[1])
 
 class quotesCog:
     """Commands for quotes"""
@@ -50,12 +41,12 @@ class quotesCog:
         selection = quotes
         if len(args) > 0:
             # Filter for a word
-            filtered_quotes = [quote for quote in quotes if args[0].lower() in quote.lower()]
+            filtered_quotes = [quote for quote in quotes if args[0].lower() in quote[0].lower()]
             if len(filtered_quotes) > 0:
                 selection = filtered_quotes
             else:
                 await self.bot.say("No quotes with that word. I'm giving you random shit instead.")
-        await self.bot.say(random.choice(selection))
+        await self.bot.say(format_quote(random.choice(selection)))
 
     # *args would not give ' " ' character for some reason
     @commands.command(pass_context=True)
@@ -68,7 +59,7 @@ class quotesCog:
             save_quotes()
             await self.bot.say("Added quote: " + msg)
         else:
-            await self.bot.say("Quotes must be of the form '{}'".format(OUTPUT_FORMAT))
+            await self.bot.say("Quotes must be of the form '\"Quote\" - Source'")
 
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
