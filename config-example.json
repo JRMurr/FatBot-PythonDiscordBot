@@ -1,0 +1,10 @@
+{
+	"cmdPrefix": "!",
+  "TestbotID": "REPLACE ME",
+  "fatBotID": "REPLACE ME",
+  "discord_id": "REPLACE ME",
+  "imgur_client_id":"REPLACE ME",
+  "imgur_client_secret":"REPLACE ME",
+  "imgur_access_token" : "REPLACE ME",
+  "imgur_refresh_token": "REPLACE ME"
+}
