@@ -17,8 +17,8 @@ logger.addHandler(handler)
 
 initial_extensions = [
     'cogs.imgur',
-    #'cogs.youtube',
-    #'cogs.twitch',
+    'cogs.youtube',
+    'cogs.twitch',
     'cogs.polls',
     'cogs.memes',
     'cogs.quotes'
