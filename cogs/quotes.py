@@ -3,86 +3,85 @@ from discord.ext import commands
 from .utils import checks
 import json
 import random
-quotefile = open('quotes.json')
-quotes = json.load(quotefile)
+import re
+
+FILE_NAME = 'quotes.json'
+INPUT_REGEX = re.compile(r'"(.+)" \- ((\S+\s*)+)')
+OUTPUT_FORMAT = '"{}" - {}' # Quote - source
+LIST_FORMAT = "\n{} - "
+MAX_WHISPER_LENGTH = 1500
+
+# Load all quotes
+try:
+    quotes = json.load(open(FILE_NAME))
+except Exception as e:
+    print("Error loading quotes:\n{}".format(e))
+    quotes = []
+
+def setup(bot):
+    bot.add_cog(quotesCog(bot))
+
+def save_quotes():
+    try:
+        json.dump(quotes, open(FILE_NAME, 'w'), indent=4)
+    except Exception as e:
+        print("Error saving quotes")
+
+def format_quote(quote):
+    return OUTPUT_FORMAT.format(quote[0], quote[1])
 
 class quotesCog:
-    """Commands for testing things"""
+    """Commands for quotes"""
 
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
-    async def quote(self,*args):
+    async def quote(self, *args):
         selection = quotes
         if len(args) > 0:
-            filtered_quotes = [quote for quote in quotes if args[0].lower() in quote.lower()] # Filter for a word
+            # Filter for a word
+            filtered_quotes = [quote for quote in quotes if args[0].lower() in quote[0].lower()]
             if len(filtered_quotes) > 0:
                 selection = filtered_quotes
             else:
-                await self.bot.say("No quotes with that word")
-        await self.bot.say(random.choice(selection))
+                await self.bot.say("No quotes with that word. I'm giving you random shit instead.")
+        await self.bot.say(format_quote(random.choice(selection)))
 
     # *args would not give ' " ' character for some reason
     @commands.command(pass_context=True)
-    async def savequote(self,ctx):
+    async def savequote(self, ctx):
         args = ctx.message.content.split(' ')
-        msg = ' '.join(args[1::])
-        # if not msg.startswith('"'):
-        #     await self.bot.say("first character of quote must be a ' \" ' ")
-        #     return
-        # tmp = msg[1::]
-        # if tmp.find('"') == -1:
-        #     await self.bot.say("needs a second '\"' at the end of the quote")
-        #     return
-        # if tmp.find('-') == -1:
-        #     await self.bot.say("put an author after the quote with a -")
-        #     return
-        regex = re.compile(r'".+" \- (\w+\s*)+')
-        if regex.search(msg):
-            quotes.append(msg)
-            with open('quotes.json', 'w') as fp:
-                json.dump(quotes, fp,indent=4)
-            await self.bot.say("added quote:" + msg)
+        msg = ' '.join(args[1:])
+        match = INPUT_REGEX.match(msg)
+        if match:
+            quotes.append((match.group(1), match.group(2))) # List of (quote, source)
+            save_quotes()
+            await self.bot.say("Added quote: " + msg)
         else:
             await self.bot.say("Quotes must be of the form '\"Quote\" - Source'")
-
 
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
     async def showquotes(self):
         msg = " \n"
-        i = 0
-        for quote in quotes:
-            msg = msg + '\n' + str(i) + ": " + quote
-            i += 1
-            if len(msg) >= 1500:
+        for i in range(len(quotes)):
+            msg += '\n' + OUTPUT_FORMAT.format(quotes[i][0], quotes[i][1]) # quote, source
+            if len(msg) >= MAX_WHISPER_LENGTH:
                 await self.bot.whisper(msg)
                 msg = "\n"
-        # while len(msg) >=2000:
-        #     sub_msg = msg[::2000]
-        #     index = sub_msg.rfind('\n')
-        #     print("index: " + str(index))
-        #     sub_msg = sub_msg[::index]
-        #     await self.bot.whisper(sub_msg)
-        #     msg = msg[index+1::]
         await self.bot.whisper(msg)
-
 
     @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
-    async def removequote(self,index: int):
+    async def removequote(self, index: int):
         """Removes the indexed quote from list of quotes
 
-            Cant be used in pms"""
-        if index < 0 or index > len(quotes):
-            await self.bot.say("index passed is greater than the number of quotes or is negative")
-        to_remove = quotes[index]
-        del quotes[index]
-        with open('quotes.json', 'w') as fp:
-            json.dump(quotes, fp,indent=4)
-        await self.bot.say("removed: " + to_remove)
-
-
-def setup(bot):
-    bot.add_cog(quotesCog(bot))
+            Cannot be used in PMs"""
+        if 0 <= index < len(quotes):
+            to_remove = quotes[index]
+            del quotes[index]
+            save_quotes()
+            await self.bot.say("Removed: " + to_remove)
+        else:
+            await self.bot.say("Invalid index")
