@@ -43,7 +43,7 @@ class quotesCog:
             # Filter for a word
             target = args[0].lower()
             if target == 'jedi':
-                selection = ['\"Suck my dick Jedi\" - Bob'] # Important case
+                selection = [['Suck my dick Jedi', 'Bob']] # Important case
             else:
                 filtered_quotes = [q for q in quotes if target in (q[0] + q[1]).lower()]
                 if len(filtered_quotes) > 0:

@@ -2,4 +2,5 @@ cogs/__pycache__/imgur.cpython-35.pyc
 cogs/__pycache__/youtube.cpython-35.pyc
 *.pyc
 *.json
+discord.log
 !config-example.json
