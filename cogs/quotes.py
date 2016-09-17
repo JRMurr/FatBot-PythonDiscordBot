@@ -47,7 +47,7 @@ class quotesCog:
             if len(filtered_quotes) > 0:
                 selection = filtered_quotes
             else:
-                await self.bot.say("No quotes with that word. I'm giving you random shit instead.")
+                await self.bot.say("No quotes with that word. I'm giving you random stuff instead.")
         await self.bot.say(format_quote(random.choice(selection)))
 
     # *args would not give ' " ' character for some reason
