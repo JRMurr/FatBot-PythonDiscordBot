@@ -250,7 +250,6 @@ async def toggle_owner_response():
 @checks.admin_or_permissions(manage_roles=True)
 async def channel_whitelist(ctx,isWhitelist: bool):
     channel = ctx.message.channel
-    #print("poo")
     if not isWhitelist and channel in whiteListedChannels:
         whiteListedChannels.remove(channel.id)
         await bot.say("removed channel from whitelist")
