@@ -1,7 +1,5 @@
 {
 	"cmdPrefix": "!",
-  "TestbotID": "REPLACE ME",
-  "fatBotID": "REPLACE ME",
   "discord_id": "REPLACE ME",
   "imgur_client_id":"REPLACE ME",
   "imgur_client_secret":"REPLACE ME",
