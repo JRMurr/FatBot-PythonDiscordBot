@@ -19,9 +19,11 @@ initial_extensions = [
     'cogs.imgur',
     'cogs.youtube',
     'cogs.twitch',
-    'cogs.polls',
+    'cogs.test',
+    'cogs.twit',
     'cogs.memes',
-    'cogs.quotes'
+    'cogs.quotes',
+    'cogs.predict'
 ]
 try:
     configDict = json.load(open('config.json'))
@@ -40,6 +42,7 @@ if configDict['cmdPrefix']:
 bot = commands.Bot(command_prefix=cmdPrefix, description=description)
 
 
+
 respondToOwner = False
 ownerResponses = ['Can do daddy','Sure thing pops','Anything for you dad','Right away father','Yes sir','Fine']
 
@@ -54,6 +57,11 @@ try:
     keyWords = json.load(open('keyWords.json'))
 except Exception as e:
     keyWords = {}
+
+try:
+    timeOutUsers = json.load(open('timeOutUsers.json'))
+except Exception as e:
+    timeOutUsers = {}
 
 
 import linecache
@@ -80,8 +88,9 @@ async def on_ready():
         try:
             bot.load_extension(extension)
         except Exception as e:
-            print('Failed to load extension {}\n{}: {}'.format(
-                extension, type(e).__name__, e))
+            #print('Failed to load extension {}\n{}: {}'.format(
+            #    extension, type(e).__name__, e))
+            print("error loading " + extension + ","+getExceptionString())
 
 
 @bot.command(hidden=True)
@@ -133,7 +142,20 @@ async def say(*args):
     msg = ' '.join(args)
     await bot.say(msg)
 
+@bot.command(pass_context=True)
+async def do_multiple(ctx,numTimes: int,*,command :str):
+    """does the passed command the specifed number of times"""
 
+    msg = copy.copy(ctx.message)
+    msg.content = cmdPrefix + command
+    if numTimes > 5:
+        await bot.say("thats too many times boi chill")
+        return
+    if command.startswith("do_multiple"):
+        await bot.say("u fukin thought")
+        return
+    for i in range(numTimes):
+        await on_message(msg)
 
 
 @bot.command(hidden=True)
@@ -147,7 +169,8 @@ async def load(*, module: str):
     #     await bot.say(getExceptionString())
     except Exception as e:
         await bot.say('\U0001f52b')
-        await bot.say('{}: {}'.format(type(e).__name__, e))
+        #await bot.say('{}: {}'.format(type(e).__name__, e))
+        await bot.say(getExceptionString())
     else:
         await bot.say('\U0001f44c')
 
@@ -250,6 +273,7 @@ async def toggle_owner_response():
 @checks.admin_or_permissions(manage_roles=True)
 async def channel_whitelist(ctx,isWhitelist: bool):
     channel = ctx.message.channel
+    #print("poo")
     if not isWhitelist and channel in whiteListedChannels:
         whiteListedChannels.remove(channel.id)
         await bot.say("removed channel from whitelist")
@@ -259,11 +283,54 @@ async def channel_whitelist(ctx,isWhitelist: bool):
     with open('whitelist.json', 'w') as fp:
                     json.dump(whiteListedChannels, fp,indent=4)
 
+@bot.group(pass_context=True)
+@checks.admin_or_permissions(kick_members=True)
+async def timeout(ctx):
+    """Timeout command group"""
+    if ctx.invoked_subcommand is None:
+        await bot.say("use {}help timeout".format(bot.command_prefix))
+
+
+
+@timeout.command(pass_context=True)
+@checks.admin_or_permissions(kick_members=True)
+async def set_length(ctx,timeOutLength: int):
+    """Usage: timeout set_length <length in min> <@mention of user(s) to timeout>
+
+        When a user is in timeout, their current messages will stay but all new
+        messages during the timeout will be deleted.
+        (There may be a delay when the server is under a high load)
+    """
+    message = ctx.message
+    for user in message.mentions:
+        #save the end of the timeout
+        timeOutUsers[user] = message.timestamp + datetime.timedelta(minutes = timeOutLength)
+    await bot.say("{}".format(timeOutUsers))
+
+
+# https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
 
 @bot.command()
-async def list_commands():
-    txt = "commands: {}".format(list(bot.commands.keys()) + list(aliasDict.keys()))
-    await bot.say(txt[:2000])
+async def alias_list():
+    msg = ""
+    for chunk in list(chunks(sorted(list(aliasDict.keys())),3)):
+        length = len(chunk)
+        if length == 3:
+            msg+= "{} {} {}\n".format(chunk[0].ljust(20),chunk[1].ljust(20),chunk[2].ljust(20))
+        elif length == 2:
+            msg+= "{} {}\n".format(chunk[0].ljust(20),chunk[1].ljust(20))
+        else:
+            msg+= "{}\n".format(chunk[0].ljust(20))
+        if len(msg) >= 1850:
+            await bot.whisper("```"+msg +"```")
+            msg = "\n"
+    await bot.whisper("```"+msg +"```")
+
+
 #key user id -> dict with timestamp of last message in a channel that cares, and timeout start timestamp
 userLastCommand = {}
 
@@ -278,9 +345,14 @@ async def on_message(message):
     if respondToOwner and checks.is_owner_check(message)and workingMessage.content.startswith(cmdPrefix):
         await bot.send_message(message.channel,random.choice(ownerResponses))
 
+    # #delete if in timeout
+    currentTime = message.timestamp
+    # if message.author in timeOutUsers:
+    #
+
     if workingMessage.content.lower().endswith("-del"):
-        deleteMessage = True
-        workingMessage.content = message.content[:-4].strip()
+	       deleteMessage = True
+	       workingMessage.content = message.content[:-4].strip()
 
     if workingMessage.content.startswith(cmdPrefix):
         #print("processing " + message.content)
@@ -294,9 +366,9 @@ async def on_message(message):
         #role = discord.utils.find(check, message.author.roles)
         roles = message.author.permissions_in(message.channel)
         #print("roles {}".format(roles))
-        if passedCMD in botCommands and message.channel.id not in whiteListedChannels and not roles.manage_roles:
+        if passedCMD in botCommands and message.channel.id not in whiteListedChannels and not roles.manage_channels:
             #command ran is an actual commands or alias
-            currentTime = message.timestamp
+
             if message.author in userLastCommand:
                 timeStamps = userLastCommand[message.author]
                 msg1 = timeStamps['msg1']
