@@ -23,7 +23,8 @@ initial_extensions = [
     'cogs.twit',
     'cogs.memes',
     'cogs.quotes',
-    'cogs.predict'
+    'cogs.predict',
+    'cogs.standings',
 ]
 try:
     configDict = json.load(open('config.json'))
