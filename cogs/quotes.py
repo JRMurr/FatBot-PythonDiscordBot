@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands
 from .utils import checks
 import json
@@ -7,7 +6,7 @@ import re
 
 FILE_NAME = 'quotes.json'
 INPUT_REGEX = re.compile(r'"(.+)" \- ((\S+\s*)+)')
-OUTPUT_FORMAT = '"{}" - {}' # Quote - source
+OUTPUT_FORMAT = '"{}" - {}'  # Quote - source
 LIST_FORMAT = "\n{} - "
 MAX_WHISPER_LENGTH = 1500
 
@@ -18,8 +17,10 @@ except Exception as e:
     print("Error loading quotes:\n{}".format(e))
     quotes = []
 
+
 def setup(bot):
     bot.add_cog(quotesCog(bot))
+
 
 def save_quotes():
     try:
@@ -27,8 +28,10 @@ def save_quotes():
     except Exception as e:
         print("Error saving quotes")
 
+
 def format_quote(quote):
     return OUTPUT_FORMAT.format(quote[0], quote[1])
+
 
 class quotesCog:
     """Commands for quotes"""
@@ -38,15 +41,14 @@ class quotesCog:
 
     @commands.command()
     async def quote(self, *args):
-        selection = quotes
-        if len(args) > 0:
+        if args:
             # Filter for a word
-            target = args[0].lower()
-            rgx = re.compile(r'\b' + target.lower())
-            filtered_quotes = [q for q in quotes if rgx.search(str(q).lower())]
+            target = ' '.join(args)  # Combine the given words with spaces
+            filtered_quotes = [q for q in quotes if target.lower() in q.lower()]
             if len(filtered_quotes) > 0:
                 selection = filtered_quotes
             else:
+                selection = quotes
                 await self.bot.say("No quotes with that word. I'm giving you random stuff instead.")
         await self.bot.say(format_quote(random.choice(selection)))
 
@@ -57,7 +59,7 @@ class quotesCog:
         msg = ' '.join(args[1:])
         match = INPUT_REGEX.match(msg)
         if match:
-            quotes.append((match.group(1), match.group(2))) # List of (quote, source)
+            quotes.append((match.group(1), match.group(2)))  # List of (quote, source)
             save_quotes()
             await self.bot.say("Added quote: " + msg)
         else:
@@ -68,7 +70,7 @@ class quotesCog:
     async def showquotes(self):
         msg = " \n"
         for i in range(len(quotes)):
-            msg += '\n' + OUTPUT_FORMAT.format(quotes[i][0], quotes[i][1]) # quote, source
+            msg += '\n' + OUTPUT_FORMAT.format(quotes[i][0], quotes[i][1])  # quote, source
             if len(msg) >= MAX_WHISPER_LENGTH:
                 await self.bot.whisper(msg)
                 msg = "\n"
