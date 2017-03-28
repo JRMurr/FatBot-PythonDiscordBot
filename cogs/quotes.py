@@ -41,14 +41,17 @@ class quotesCog:
 
     @commands.command()
     async def quote(self, *args):
+        selection = quotes  # By default, we select from all quotes
+        # If more words were provided, use them to filter the quotes
         if args:
             # Filter for a word
             target = ' '.join(args)  # Combine the given words with spaces
             filtered_quotes = [q for q in quotes if target.lower() in q.lower()]
-            if len(filtered_quotes) > 0:
+
+            # If any quotes matched the filter, select from those, otherwise print a message
+            if filtered_quotes:
                 selection = filtered_quotes
             else:
-                selection = quotes
                 await self.bot.say("No quotes with that word. I'm giving you random stuff instead.")
         await self.bot.say(format_quote(random.choice(selection)))
 
@@ -68,9 +71,19 @@ class quotesCog:
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
     async def showquotes(self):
-        msg = " \n"
-        for i in range(len(quotes)):
-            msg += '\n' + OUTPUT_FORMAT.format(quotes[i][0], quotes[i][1])  # quote, source
+        quote_strs = [OUTPUT_FORMAT.format(*quote) for quote in quotes]
+        msg = '\n'.join(quote_strs)
+        msgs = []  # Used to split string into components so that each one is smaller than max size
+        while len(msg) > MAX_WHISPER_LENGTH:
+            try:
+                pos = msg.rfind('\n', end=MAX_WHISPER_LENGTH)
+            except ValueError:
+                self.bot.whisper("Something went wrong. Maybe there's a quote that's too long?")
+                return
+            msgs.append(msg[:pos])
+            msg = msg[pos:]
+        for quote in quotes:
+            msg += '\n' + OUTPUT_FORMAT.format(*quote)  # Unpack the quote for formatting
             if len(msg) >= MAX_WHISPER_LENGTH:
                 await self.bot.whisper(msg)
                 msg = "\n"
