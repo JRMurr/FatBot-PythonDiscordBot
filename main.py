@@ -189,6 +189,21 @@ async def unload(*, module: str):
         await bot.say('\U0001f44c')
 
 
+@bot.command(hidden=True)
+@checks.is_owner()
+async def reload(*, module: str):
+    """Loads a module."""
+    module = module.strip()
+    try:
+        bot.unload_extension(module)
+        bot.load_extension(module)
+    except Exception as e:
+        await bot.say('\U0001f52b')
+        await bot.say(getExceptionString())
+    else:
+        await bot.say('\U0001f44c')
+
+
 @bot.command(pass_context=True, hidden=True)
 async def get_id(ctx):
     await bot.say(ctx.message.author.id)
