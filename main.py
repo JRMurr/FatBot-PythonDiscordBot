@@ -23,7 +23,8 @@ initial_extensions = [
     'cogs.twit',
     'cogs.memes',
     'cogs.quotes',
-    'cogs.predict'
+    'cogs.predict',
+    'cogs.standings',
 ]
 try:
     configDict = json.load(open('config.json'))
@@ -392,7 +393,7 @@ async def on_message(message):
                 if timeoutStart is not None:
                     diff = currentTime - timeoutStart
                     if diff.total_seconds() < 30:
-                        await bot.send_message(message.author, "You're in timeout, no memes for {} secs".format(30 - diff.total_seconds()))
+                        await bot.send_message(message.author, "You're in timeout, no memes for {:.1f} secs".format(30 - diff.total_seconds()))
                         return
                     else:
                         timeStamps.update({'timeoutStart':None})
