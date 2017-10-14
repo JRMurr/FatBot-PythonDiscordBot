@@ -16,15 +16,15 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 initial_extensions = [
-    'cogs.imgur',
-    'cogs.youtube',
-    'cogs.twitch',
+    # 'cogs.imgur',
+    # 'cogs.youtube',
+    # 'cogs.twitch',
     'cogs.test',
-    'cogs.twit',
+    # 'cogs.twit',
     'cogs.memes',
     'cogs.quotes',
     'cogs.predict',
-    'cogs.standings',
+    'cogs.standings'
 ]
 try:
     configDict = json.load(open('config.json'))
@@ -190,21 +190,6 @@ async def unload(*, module: str):
         await bot.say('\U0001f44c')
 
 
-@bot.command(hidden=True)
-@checks.is_owner()
-async def reload(*, module: str):
-    """Loads a module."""
-    module = module.strip()
-    try:
-        bot.unload_extension(module)
-        bot.load_extension(module)
-    except Exception as e:
-        await bot.say('\U0001f52b')
-        await bot.say(getExceptionString())
-    else:
-        await bot.say('\U0001f44c')
-
-
 @bot.command(pass_context=True, hidden=True)
 async def get_id(ctx):
     await bot.say(ctx.message.author.id)
@@ -227,25 +212,25 @@ async def testcheck():
 
 @bot.command(no_pm=True)
 @checks.admin_or_permissions(manage_roles=True)
-async def add_keyword(*args):
+async def add_keyword(key, response):
     """adds keyphrase/response to be checked
 
-       paramaters should be add_keyword <string of words> : <response of words>
-       notice the space before and after the ':'
+       "<key>" "<response>"
        """
-    if ':' not in args:
-        await bot.say("input should be 'add_keyword <string of words> : <response of words>'\nmake sure there is a space before and after the ':'")
-        return
-    index = args.index(':')
-    keyphrase = args[:index]
-    response = args[index+1:]
-    keyWords.update({(' '.join(keyphrase)).lower():' '.join(response)})
+    # if ':' not in args:
+    #     await bot.say("input should be 'add_keyword <string of words> : <response of words (comma seperate to have the bot choose a response at random each time)>'\nmake sure there is a space before and after the ':'")
+    #     return
+    # index = args.index(':')
+    # keyphrase = args[:index]
+    # response = args[index+1:]
+    # response = ' '.join(response).split(',')
+    keyWords.update({(' '.join(key)).lower().strip() : response})
     with open('keyWords.json', 'w') as fp:
         json.dump(keyWords, fp,indent=4)
-    await bot.say("added key '{}' with response '{}'".format((' '.join(keyphrase)).lower(),' '.join(response)))
+    await bot.say("added key '{}' with response '{}'".format((' '.join(key)).lower(),response))
+
 
 @bot.command()
-@checks.admin_or_permissions(manage_roles=True)
 async def list_keywords():
     #print("keys:" + ','.join(keyWords.keys()))
     msg = "keys:"
@@ -263,13 +248,13 @@ async def list_keywords():
 
 @bot.command(no_pm=True)
 @checks.admin_or_permissions(manage_roles=True)
-async def remove_keyword(*args):
+async def remove_keyword(keyphrase):
     """removes keyword phrase from keywords"""
-    keyphrase = (' '.join(args)).lower()
+    # keyphrase = (' '.join(args)).lower()
     try:
-        del keyWords[keyphrase]
+        del keyWords[keyphrase.lower().strip()]
     except KeyError as e:
-        await bot.say("'{}' not in list of keywords".format(keyphrase))
+        await bot.say("'{}' not in list of keywords".format(keyphrase.strip()))
     else:
         with open('keyWords.json', 'w') as fp:
             json.dump(keyWords, fp,indent=4)
@@ -319,6 +304,7 @@ async def set_length(ctx,timeOutLength: int):
     """
     message = ctx.message
     for user in message.mentions:
+
         #save the end of the timeout
         timeOutUsers[user] = message.timestamp + datetime.timedelta(minutes = timeOutLength)
     await bot.say("{}".format(timeOutUsers))
@@ -434,8 +420,12 @@ async def on_message(message):
             msg.content = cmdPrefix + aliasDict[alias][0] + " " + aliasDict[alias][1]
             #print("running alias: " + msg.content)
             await bot.process_commands(msg)
-    elif workingMessage.content.lower() in keyWords:
-        await bot.send_message(message.channel,keyWords[message.content.lower()])
+    elif workingMessage.content.lower().strip() in keyWords:
+        response = keyWords[message.content.lower()]
+        if type(response) is list:
+            response = random.choice(response)
+        print("Sending a response to ".format(workingMessage.content.lower()))
+        await bot.send_message(message.channel, response)
     if deleteMessage:
         await bot.delete_message(message)
 
