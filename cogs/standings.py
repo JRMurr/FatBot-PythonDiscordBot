@@ -85,7 +85,7 @@ class NHLRecord:
         'Los Angeles Kings': 'LAK',
         'Vegas Golden Knights': 'VGK',
     }
-    FORMAT_STRING = "{abbr_name} | {gp:>2} | {wins:>2} | {losses:>2} |  {otl:>2} | {points:>3} |"
+    FORMAT_STRING = "{abbr_name} | {gp:>2} | {wins:>2} | {losses:>2} |  {otl:>2} | {points:>3}"
 
     def __init__(self, conference, division, record_dict):
         self.conference = conference
@@ -132,21 +132,21 @@ class NHL(League):
 """
 ```
 EASTERN CONFERENCE
-    | GP |  W |  L | OTL | PTS |
-----|----|----|----|-----|-----|
+    | GP |  W |  L | OTL | PTS
+----|----|----|----|-----|-----
 {Metropolitan}
-----|----|----|----|-----|-----|
+----|----|----|----|-----|-----
 {Atlantic}
-----|----|----|----|-----|-----|
+----|----|----|----|-----|-----
 {Eastern}
 
 WESTERN CONFERENCE
-    | GP |  W |  L | OTL | PTS |
-----|----|----|----|-----|-----|
+    | GP |  W |  L | OTL | PTS
+----|----|----|----|-----|-----
 {Central}
-----|----|----|----|-----|-----|
+----|----|----|----|-----|-----
 {Pacific}
-----|----|----|----|-----|-----|
+----|----|----|----|-----|-----
 {Western}
 ```
 """
