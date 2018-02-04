@@ -12,3 +12,6 @@ google-api-python-client
 
 #######standings#######
 requests
+
+#######last fm#######
+pylast

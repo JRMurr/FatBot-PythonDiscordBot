@@ -1,11 +1,13 @@
 import discord
 from discord.ext import commands
 from cogs.utils import checks
+from functools import reduce
 import random
 import copy
 import json
 import re
 import asyncio  # for debug
+import traceback
 
 import logging
 
@@ -16,15 +18,16 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 initial_extensions = [
-    # 'cogs.imgur',
-    # 'cogs.youtube',
-    # 'cogs.twitch',
-    'cogs.test',
+    'cogs.imgur',
+    'cogs.youtube',
+    'cogs.twitch',
+    # 'cogs.test',
     # 'cogs.twit',
     'cogs.memes',
     'cogs.quotes',
     'cogs.predict',
-    'cogs.standings'
+    'cogs.standings',
+    'cogs.lastfm'
 ]
 try:
     configDict = json.load(open('config.json'))
@@ -69,6 +72,7 @@ import linecache
 import sys
 
 def getExceptionString():
+    traceback.print_exc()
     exc_type, exc_obj, tb = sys.exc_info()
     f = tb.tb_frame
     lineno = tb.tb_lineno
@@ -89,8 +93,6 @@ async def on_ready():
         try:
             bot.load_extension(extension)
         except Exception as e:
-            #print('Failed to load extension {}\n{}: {}'.format(
-            #    extension, type(e).__name__, e))
             print("error loading " + extension + ","+getExceptionString())
 
 
@@ -102,21 +104,16 @@ async def shutdown():
 
 @bot.command(pass_context=True)
 @checks.admin_or_permissions(manage_roles=True)
-#@checks.role_or_admin('Lord of Albums',manage_roles=True)
 async def alias(ctx):
-
     """Creates a alias command
 
         ex: !alias sayHi say hi"""
-    #print("makeing alias")
     args = ctx.message.content.split(' ')
     if len(args) <= 2:  # need alias, new name, and at least the 'real' command
         await bot.say("Usage: {0}alias <aliasname> <cmd with arguments>".format(cmdPrefix))
         return
     name = args[1]
     args = args[2::]  # remove alias and name from list
-    #print("args: " + str(args))
-    #print("name: " + name)
     if name in ctx.bot.commands or name is "help":
         await bot.say("dont overwrite big boi commands you goon")
     else:
@@ -137,6 +134,13 @@ async def choose(*choices: str):
     """Chooses between multiple choices."""
     await bot.say(random.choice(choices))
 
+@bot.command(description='Randomly shuffles your choices')
+async def choose_list(*choices: str):
+    """Randomly shuffles your choices"""
+    res = list(choices)
+    random.shuffle(res) #in-place shuffle
+    await bot.say(reduce(lambda x,y: x+"\n{}: {}".format(y[0],y[1]),
+                         list(zip(range(1,len(res) +1),res)),'.'))
 
 @bot.command()
 async def say(*args):
@@ -164,13 +168,12 @@ async def do_multiple(ctx,numTimes: int,*,command :str):
 async def load(*, module: str):
     """Loads a module."""
     module = module.strip()
+    if not module.startswith('cogs.'):
+        module = 'cogs.' + module
     try:
         bot.load_extension(module)
-    # except:
-    #     await bot.say(getExceptionString())
     except Exception as e:
         await bot.say('\U0001f52b')
-        #await bot.say('{}: {}'.format(type(e).__name__, e))
         await bot.say(getExceptionString())
     else:
         await bot.say('\U0001f44c')
@@ -181,11 +184,29 @@ async def load(*, module: str):
 async def unload(*, module: str):
     """Unloads a module."""
     module = module.strip()
+    if not module.startswith('cogs.'):
+        module = 'cogs.' + module
     try:
         bot.unload_extension(module)
     except Exception as e:
         await bot.say('\U0001f52b')
         await bot.say('{}: {}'.format(type(e).__name__, e))
+    else:
+        await bot.say('\U0001f44c')
+
+@bot.command(hidden=True)
+@checks.is_owner()
+async def reload(*, module: str):
+    """Loads a module."""
+    module = module.strip()
+    if not module.startswith('cogs.'):
+        module = 'cogs.' + module
+    try:
+        bot.unload_extension(module)
+        bot.load_extension(module)
+    except Exception as e:
+        await bot.say('\U0001f52b')
+        await bot.say(getExceptionString())
     else:
         await bot.say('\U0001f44c')
 
@@ -200,15 +221,6 @@ async def get_id(ctx):
 async def testcheck():
     await bot.say("ayy")
 
-# @bot.command(pass_context=True, hidden=True)
-# async def do(ctx, times : int, *, command):
-#     """Repeats a command a specified number of times."""
-#     msg = copy.copy(ctx.message)
-#     msg.content = command
-#     for i in range(times):
-#         await bot.process_commands(msg)
-#
-# @bot.command()
 
 @bot.command(no_pm=True)
 @checks.admin_or_permissions(manage_roles=True)
@@ -217,29 +229,19 @@ async def add_keyword(key, response):
 
        "<key>" "<response>"
        """
-    # if ':' not in args:
-    #     await bot.say("input should be 'add_keyword <string of words> : <response of words (comma seperate to have the bot choose a response at random each time)>'\nmake sure there is a space before and after the ':'")
-    #     return
-    # index = args.index(':')
-    # keyphrase = args[:index]
-    # response = args[index+1:]
-    # response = ' '.join(response).split(',')
-    keyWords.update({(' '.join(key)).lower().strip() : response})
+    keyWords.update({key.lower().strip() : response})
     with open('keyWords.json', 'w') as fp:
         json.dump(keyWords, fp,indent=4)
-    await bot.say("added key '{}' with response '{}'".format((' '.join(key)).lower(),response))
+    await bot.say("added key '{}' with response '{}'".format(key.lower(),response))
 
 
 @bot.command()
 async def list_keywords():
-    #print("keys:" + ','.join(keyWords.keys()))
     msg = "keys:"
     i = 0
     for key in keyWords.keys():
-        #print("key:" + key)
         msg = msg + '\n' + str(i) + ": " + str(key)
         i += 1
-        #print("msg:" + msg)
         if len(msg) >= 1500:
             await bot.whisper(msg)
             msg = "\n"
@@ -250,7 +252,6 @@ async def list_keywords():
 @checks.admin_or_permissions(manage_roles=True)
 async def remove_keyword(keyphrase):
     """removes keyword phrase from keywords"""
-    # keyphrase = (' '.join(args)).lower()
     try:
         del keyWords[keyphrase.lower().strip()]
     except KeyError as e:
@@ -274,7 +275,6 @@ async def toggle_owner_response():
 @checks.admin_or_permissions(manage_roles=True)
 async def channel_whitelist(ctx,isWhitelist: bool):
     channel = ctx.message.channel
-    #print("poo")
     if not isWhitelist and channel in whiteListedChannels:
         whiteListedChannels.remove(channel.id)
         await bot.say("removed channel from whitelist")
@@ -304,7 +304,6 @@ async def set_length(ctx,timeOutLength: int):
     """
     message = ctx.message
     for user in message.mentions:
-
         #save the end of the timeout
         timeOutUsers[user] = message.timestamp + datetime.timedelta(minutes = timeOutLength)
     await bot.say("{}".format(timeOutUsers))
@@ -339,7 +338,6 @@ userLastCommand = {}
 @bot.event
 async def on_message(message):
     global respondToOwner
-    #print(str(userLastCommand))
     deleteMessage = False
     workingMessage = copy.copy(message) #will use to make changes to the message so orignal message can still be used in func calls
     if message.author == bot.user:
@@ -347,30 +345,23 @@ async def on_message(message):
     if respondToOwner and checks.is_owner_check(message)and workingMessage.content.startswith(cmdPrefix):
         await bot.send_message(message.channel,random.choice(ownerResponses))
 
-    # #delete if in timeout
     currentTime = message.timestamp
-    # if message.author in timeOutUsers:
-    #
+
 
     if workingMessage.content.lower().endswith("-del"):
 	       deleteMessage = True
 	       workingMessage.content = message.content[:-4].strip()
 
     if workingMessage.content.startswith(cmdPrefix):
-        #print("processing " + message.content)
         botCommands = list(bot.commands.keys()) + list(aliasDict.keys())
 
         msg = copy.copy(workingMessage)
         passedCMD = msg.content.split(' ')[0]
         passedCMD = passedCMD[len(cmdPrefix)::]
 
-        #check = lambda r: r.name == 'manage_roles'
-        #role = discord.utils.find(check, message.author.roles)
         roles = message.author.permissions_in(message.channel)
-        #print("roles {}".format(roles))
         if passedCMD in botCommands and message.channel.id not in whiteListedChannels and not roles.manage_channels:
             #command ran is an actual commands or alias
-
             if message.author in userLastCommand:
                 timeStamps = userLastCommand[message.author]
                 msg1 = timeStamps['msg1']
@@ -418,7 +409,6 @@ async def on_message(message):
         alias = alias[len(cmdPrefix)::]
         if alias in aliasDict:
             msg.content = cmdPrefix + aliasDict[alias][0] + " " + aliasDict[alias][1]
-            #print("running alias: " + msg.content)
             await bot.process_commands(msg)
     elif workingMessage.content.lower().strip() in keyWords:
         response = keyWords[message.content.lower()]
