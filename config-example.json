@@ -7,8 +7,8 @@
     "imgur_refresh_token": "REPLACE ME",
     "twitter_consumer_key": "REPLACE ME",
     "twitter_consumer_secret" : "REPLACE ME",
-    "twitter_accsess_token" : "REPLACE ME",
-    "twitter_accsess_secret" : "REPLACE ME",
+    "twitter_access_token" : "REPLACE ME",
+    "twitter_access_secret" : "REPLACE ME",
     "last_fm_api_key": "REPLACE ME",
     "last_fm_secret": "REPLACE ME"
 }

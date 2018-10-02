@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  fatbot:
+    build: ./
+    image: fatbot
+    tty: true
+    volumes:
+      - .:/fatbot:rw
