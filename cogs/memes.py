@@ -1,15 +1,16 @@
-import discord
 from discord.ext import commands
 import emoji
+
+
 class memeCog:
     """dumb meme commands"""
-    
+
     def __init__(self, bot):
         self.bot = bot
-    
+
     @commands.command()
-    async def meme_text(self,*args):
-        #print(str(args))
+    async def meme_text(self, *args):
+        # print(str(args))
         msg = ""
         if len(args) < 1:
             await self.bot.say("enter some text that will enter the lands of memes")
@@ -23,9 +24,6 @@ class memeCog:
             msg += "  "
         await self.bot.say(msg)
 
-   
+
 def setup(bot):
     bot.add_cog(memeCog(bot))
-
-
-
