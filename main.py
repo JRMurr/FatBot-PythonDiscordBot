@@ -5,10 +5,9 @@ from functools import reduce
 import random
 import copy
 import json
-import re
-import asyncio  # for debug
 import traceback
-
+import linecache
+import sys
 import logging
 
 logger = logging.getLogger('discord')
@@ -40,17 +39,22 @@ except Exception as e:
     aliasDict = {}
 
 description = '''the greatest bot in the world'''
-cmdPrefix ="!"
+cmdPrefix = "!"
 if configDict['cmdPrefix']:
     cmdPrefix = configDict['cmdPrefix']
 bot = commands.Bot(command_prefix=cmdPrefix, description=description)
 
-
-
 respondToOwner = False
-ownerResponses = ['Can do daddy','Sure thing pops','Anything for you dad','Right away father','Yes sir','Fine']
+ownerResponses = [
+    'Can do daddy',
+    'Sure thing pops',
+    'Anything for you dad',
+    'Right away father',
+    'Yes sir',
+    'Fine',
+]
 
-#channels where its ok to spam
+# channels where its ok to spam
 try:
     whiteListedChannels = json.load(open('whitelist.json'))
 except Exception as e:
@@ -68,9 +72,6 @@ except Exception as e:
     timeOutUsers = {}
 
 
-import linecache
-import sys
-
 def getExceptionString():
     traceback.print_exc()
     exc_type, exc_obj, tb = sys.exc_info()
@@ -81,19 +82,20 @@ def getExceptionString():
     line = linecache.getline(filename, lineno, f.f_globals)
     return 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
 
+
 @bot.event
 async def on_ready():
     print('Logged in as')
     print(bot.user.name)
     print(bot.user.id)
-    print(discord.utils.oauth_url(bot.user.id,discord.Permissions.general()))
+    print(discord.utils.oauth_url(bot.user.id, discord.Permissions.general()))
     print('------')
 
     for extension in initial_extensions:
         try:
             bot.load_extension(extension)
         except Exception as e:
-            print("error loading " + extension + ","+getExceptionString())
+            print("error loading " + extension + "," + getExceptionString())
 
 
 @bot.command(hidden=True)
@@ -101,6 +103,7 @@ async def on_ready():
 async def shutdown():
     await bot.say("shutting down")
     await bot.close()
+
 
 @bot.command(pass_context=True)
 @checks.admin_or_permissions(manage_roles=True)
@@ -125,7 +128,7 @@ async def alias(ctx):
         newCommand.append(' '.join(args[1::]))
         aliasDict.update({name: newCommand})
         with open('alias.json', 'w') as fp:
-            json.dump(aliasDict, fp,indent=4)
+            json.dump(aliasDict, fp, indent=4)
         await bot.say("Created alias " + name)
 
 
@@ -134,21 +137,24 @@ async def choose(*choices: str):
     """Chooses between multiple choices."""
     await bot.say(random.choice(choices))
 
+
 @bot.command(description='Randomly shuffles your choices')
 async def choose_list(*choices: str):
     """Randomly shuffles your choices"""
     res = list(choices)
-    random.shuffle(res) #in-place shuffle
-    await bot.say(reduce(lambda x,y: x+"\n{}: {}".format(y[0],y[1]),
-                         list(zip(range(1,len(res) +1),res)),'.'))
+    random.shuffle(res)  # in-place shuffle
+    await bot.say(reduce(lambda x, y: x + "\n{}: {}".format(y[0], y[1]),
+                         list(zip(range(1, len(res) + 1), res)), '.'))
+
 
 @bot.command()
 async def say(*args):
     msg = ' '.join(args)
     await bot.say(msg)
 
+
 @bot.command(pass_context=True)
-async def do_multiple(ctx,numTimes: int,*,command :str):
+async def do_multiple(ctx, numTimes: int, *, command: str):
     """does the passed command the specifed number of times"""
 
     msg = copy.copy(ctx.message)
@@ -194,6 +200,7 @@ async def unload(*, module: str):
     else:
         await bot.say('\U0001f44c')
 
+
 @bot.command(hidden=True)
 @checks.is_owner()
 async def reload(*, module: str):
@@ -229,10 +236,10 @@ async def add_keyword(key, response):
 
        "<key>" "<response>"
        """
-    keyWords.update({key.lower().strip() : response})
+    keyWords.update({key.lower().strip(): response})
     with open('keyWords.json', 'w') as fp:
-        json.dump(keyWords, fp,indent=4)
-    await bot.say("added key '{}' with response '{}'".format(key.lower(),response))
+        json.dump(keyWords, fp, indent=4)
+    await bot.say("added key '{}' with response '{}'".format(key.lower(), response))
 
 
 @bot.command()
@@ -258,22 +265,20 @@ async def remove_keyword(keyphrase):
         await bot.say("'{}' not in list of keywords".format(keyphrase.strip()))
     else:
         with open('keyWords.json', 'w') as fp:
-            json.dump(keyWords, fp,indent=4)
+            json.dump(keyWords, fp, indent=4)
         await bot.say("removed: " + keyphrase)
-
 
 
 @bot.command()
 @checks.is_owner()
 async def toggle_owner_response():
-   global respondToOwner
-   respondToOwner = not respondToOwner
-
+    global respondToOwner
+    respondToOwner = not respondToOwner
 
 
 @bot.command(pass_context=True)
 @checks.admin_or_permissions(manage_roles=True)
-async def channel_whitelist(ctx,isWhitelist: bool):
+async def channel_whitelist(ctx, isWhitelist: bool):
     channel = ctx.message.channel
     if not isWhitelist and channel in whiteListedChannels:
         whiteListedChannels.remove(channel.id)
@@ -282,7 +287,8 @@ async def channel_whitelist(ctx,isWhitelist: bool):
         whiteListedChannels.append(channel.id)
         await bot.say("added channel to whitelist")
     with open('whitelist.json', 'w') as fp:
-                    json.dump(whiteListedChannels, fp,indent=4)
+        json.dump(whiteListedChannels, fp, indent=4)
+
 
 @bot.group(pass_context=True)
 @checks.admin_or_permissions(kick_members=True)
@@ -292,10 +298,9 @@ async def timeout(ctx):
         await bot.say("use {}help timeout".format(bot.command_prefix))
 
 
-
 @timeout.command(pass_context=True)
 @checks.admin_or_permissions(kick_members=True)
-async def set_length(ctx,timeOutLength: int):
+async def set_length(ctx, timeOutLength: int):
     """Usage: timeout set_length <length in min> <@mention of user(s) to timeout>
 
         When a user is in timeout, their current messages will stay but all new
@@ -304,8 +309,8 @@ async def set_length(ctx,timeOutLength: int):
     """
     message = ctx.message
     for user in message.mentions:
-        #save the end of the timeout
-        timeOutUsers[user] = message.timestamp + datetime.timedelta(minutes = timeOutLength)
+        # save the end of the timeout
+        timeOutUsers[user] = message.timestamp + datetime.timedelta(minutes=timeOutLength)
     await bot.say("{}".format(timeOutUsers))
 
 
@@ -315,42 +320,47 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
+
 @bot.command()
 async def alias_list():
     msg = ""
-    for chunk in list(chunks(sorted(list(aliasDict.keys())),3)):
+    for chunk in list(chunks(sorted(list(aliasDict.keys())), 3)):
         length = len(chunk)
         if length == 3:
-            msg+= "{} {} {}\n".format(chunk[0].ljust(20),chunk[1].ljust(20),chunk[2].ljust(20))
+            msg += "{} {} {}\n".format(chunk[0].ljust(20), chunk[1].ljust(20), chunk[2].ljust(20))
         elif length == 2:
-            msg+= "{} {}\n".format(chunk[0].ljust(20),chunk[1].ljust(20))
+            msg += "{} {}\n".format(chunk[0].ljust(20), chunk[1].ljust(20))
         else:
-            msg+= "{}\n".format(chunk[0].ljust(20))
+            msg += "{}\n".format(chunk[0].ljust(20))
         if len(msg) >= 1850:
-            await bot.whisper("```"+msg +"```")
+            await bot.whisper("```" + msg + "```")
             msg = "\n"
-    await bot.whisper("```"+msg +"```")
+    await bot.whisper("```" + msg + "```")
 
 
-#key user id -> dict with timestamp of last message in a channel that cares, and timeout start timestamp
+# key user id -> dict with timestamp of last message
+# in a channel that cares, and timeout start timestamp
 userLastCommand = {}
+
 
 @bot.event
 async def on_message(message):
     global respondToOwner
     deleteMessage = False
-    workingMessage = copy.copy(message) #will use to make changes to the message so orignal message can still be used in func calls
+    # will use to make changes to the message so orignal message can still be used in func calls
+    workingMessage = copy.copy(message)
     if message.author == bot.user:
         return
-    if respondToOwner and checks.is_owner_check(message)and workingMessage.content.startswith(cmdPrefix):
-        await bot.send_message(message.channel,random.choice(ownerResponses))
+    if respondToOwner \
+        and checks.is_owner_check(message) \
+        and workingMessage.content.startswith(cmdPrefix):
+        await bot.send_message(message.channel, random.choice(ownerResponses))
 
     currentTime = message.timestamp
 
-
     if workingMessage.content.lower().endswith("-del"):
-	       deleteMessage = True
-	       workingMessage.content = message.content[:-4].strip()
+        deleteMessage = True
+        workingMessage.content = message.content[:-4].strip()
 
     if workingMessage.content.startswith(cmdPrefix):
         botCommands = list(bot.commands.keys()) + list(aliasDict.keys())
@@ -361,7 +371,7 @@ async def on_message(message):
 
         roles = message.author.permissions_in(message.channel)
         if passedCMD in botCommands and message.channel.id not in whiteListedChannels and not roles.manage_channels:
-            #command ran is an actual commands or alias
+            # command ran is an actual commands or alias
             if message.author in userLastCommand:
                 timeStamps = userLastCommand[message.author]
                 msg1 = timeStamps['msg1']
@@ -370,37 +380,37 @@ async def on_message(message):
                 if timeoutStart is not None:
                     diff = currentTime - timeoutStart
                     if diff.total_seconds() < 30:
-                        await bot.send_message(message.author, "You're in timeout, no memes for {:.1f} secs".format(30 - diff.total_seconds()))
+                        await bot.send_message(message.author,
+                                               f"You're in timeout, no memes for {30 - diff.total_seconds():.1f} secs")
                         return
                     else:
-                        timeStamps.update({'timeoutStart':None})
-                        userLastCommand.update({message.author:timeStamps})
+                        timeStamps.update({'timeoutStart': None})
+                        userLastCommand.update({message.author: timeStamps})
 
-                #msg1, msg2 stuff
+                # msg1, msg2 stuff
                 if msg1 is None:
-                    #both will be none since msg2 will only have a time is msg1 is not none
+                    # both will be none since msg2 will only have a time is msg1 is not none
                     msg1 = currentTime
                 elif msg2 is None:
                     msg2 = currentTime
                 elif (msg1 - msg2).total_seconds() > 0:
-                    #msg1 is newer
+                    # msg1 is newer
                     msg2 = currentTime
                 else:
                     msg1 = currentTime
-                timeStamps.update({'msg1':msg1,'msg2':msg2})
+                timeStamps.update({'msg1': msg1, 'msg2': msg2})
 
-
-                #check diff of msg1 and msg2 to see if they were sent in under 3 secs
+                # check diff of msg1 and msg2 to see if they were sent in under 3 secs
                 if msg1 is not None and msg2 is not None:
                     diff = abs(msg1 - msg2)
                     if diff.total_seconds() < 3:
-                        timeStamps.update({'timeoutStart':currentTime})
-                        userLastCommand.update({message.author:timeStamps})
+                        timeStamps.update({'timeoutStart': currentTime})
+                        userLastCommand.update({message.author: timeStamps})
             else:
-                timeStamps = {"msg1":None,"msg2":None,"timeoutStart":None}
-                userLastCommand.update({message.author:timeStamps})
+                timeStamps = {"msg1": None, "msg2": None, "timeoutStart": None}
+                userLastCommand.update({message.author: timeStamps})
 
-        #'real' command
+        # 'real' command
         await bot.process_commands(workingMessage)
 
         msg = copy.copy(workingMessage)

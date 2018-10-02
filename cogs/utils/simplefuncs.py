@@ -1,12 +1,11 @@
-
-
-import sys
 import re
+
+
 def checkIfUrl(toCheck):
     """Returns true if toCheck is a valid url, false otherwise"""
     ip_middle_octet = u"(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5]))"
     ip_last_octet = u"(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))"
-    #url checker https://gist.github.com/dperini/729294
+    # url checker https://gist.github.com/dperini/729294
     regex = re.compile(
         u"^"
         # protocol identifier

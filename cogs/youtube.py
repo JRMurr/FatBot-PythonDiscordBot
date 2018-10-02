@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands
 from .utils import checks
 import random
@@ -41,32 +40,35 @@ YOUTUBE_READ_WRITE_SCOPE = "https://www.googleapis.com/auth/youtube"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
+
 def get_authenticated_service(args):
-  flow = flow_from_clientsecrets(CLIENT_SECRETS_FILE, scope=YOUTUBE_READ_WRITE_SCOPE,
-    message=MISSING_CLIENT_SECRETS_MESSAGE)
+    flow = flow_from_clientsecrets(CLIENT_SECRETS_FILE, scope=YOUTUBE_READ_WRITE_SCOPE,
+                                   message=MISSING_CLIENT_SECRETS_MESSAGE)
 
-  storage = Storage("%s-oauth2.json" % sys.argv[0])
-  credentials = storage.get()
+    storage = Storage("%s-oauth2.json" % sys.argv[0])
+    credentials = storage.get()
 
-  if credentials is None or credentials.invalid:
-    credentials = run_flow(flow, storage, args)
+    if credentials is None or credentials.invalid:
+        credentials = run_flow(flow, storage, args)
 
-  return build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
-    http=credentials.authorize(httplib2.Http()))
+    return build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
+                 http=credentials.authorize(httplib2.Http()))
+
 
 args = argparser.parse_args()
 youtube = get_authenticated_service(args)
 
+
 def create_playlist(playlistName):
     try:
         playlists_insert_response = youtube.playlists().insert(
-          part="snippet,status",
-          body=dict(
-            snippet=dict(
-              title=playlistName
-            ),
-            status=dict(
-                privacyStatus="public"
+            part="snippet,status",
+            body=dict(
+                snippet=dict(
+                    title=playlistName
+                ),
+                status=dict(
+                    privacyStatus="public"
                 )
             )
         ).execute()
@@ -75,11 +77,12 @@ def create_playlist(playlistName):
     else:
         print("it worked")
 
-def get_playlist(playlistName :str):
+
+def get_playlist(playlistName: str):
     results = youtube.playlists().list(
-                part="snippet,player",
-                mine=True,
-                maxResults=50
+        part="snippet,player",
+        mine=True,
+        maxResults=50
     ).execute()
     playlists = results['items']
     for playlist in playlists:
@@ -87,8 +90,9 @@ def get_playlist(playlistName :str):
             return playlist
             break
     else:
-        #playlist not found
+        # playlist not found
         return None
+
 
 def video_id(value):
     """
@@ -121,15 +125,15 @@ class youtubeCog:
 
     @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
-    async def create_playlist(self,playlistName):
+    async def create_playlist(self, playlistName):
         """creates a playlist Admin only"""
-        snippetDict = {'title':playlistName}
-        statusDict = {'privacyStatus':"public"}
-        bodyDict = {'snippet':snippetDict,'status':statusDict}
+        snippetDict = {'title': playlistName}
+        statusDict = {'privacyStatus': "public"}
+        bodyDict = {'snippet': snippetDict, 'status': statusDict}
         try:
             playlists_insert_response = youtube.playlists().insert(
-              part="snippet,status",
-              body=bodyDict
+                part="snippet,status",
+                body=bodyDict
             ).execute()
         except HttpError as e:
             print("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))
@@ -138,7 +142,7 @@ class youtubeCog:
             await self.bot.say("created playlist " + playlistName)
 
     @commands.command()
-    async def add_video(self,playlistName,videolink):
+    async def add_video(self, playlistName, videolink):
         """Adds the youtube video to the playlist passed"""
         videoID = video_id(videolink)
         if videoID is None:
@@ -151,17 +155,17 @@ class youtubeCog:
             return
         playlistID = playlist['id']
         try:
-            add_video_request=youtube.playlistItems().insert(
+            add_video_request = youtube.playlistItems().insert(
                 part="snippet",
                 body={"kind": "youtube#playlistItem",
-                'snippet': {
-                  'playlistId': playlistID,
-                  'resourceId': {
-                          'kind': 'youtube#video',
-                          'videoId': videoID
+                      'snippet': {
+                          'playlistId': playlistID,
+                          'resourceId': {
+                              'kind': 'youtube#video',
+                              'videoId': videoID
+                          }
                       }
-                    }
-                }
+                      }
             ).execute()
         except HttpError as e:
             print("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))
@@ -169,16 +173,15 @@ class youtubeCog:
         else:
             await self.bot.say("added " + videoID + " to " + playlistName)
 
-
     @commands.command()
-    async def get_playlist(self,*args):
+    async def get_playlist(self, *args):
         """Returns a link to the playlist specified
 
         returns list of playlist if passed playlist is not found"""
         results = youtube.playlists().list(
-                    part="snippet,player",
-                    mine=True,
-                    maxResults=50
+            part="snippet,player",
+            mine=True,
+            maxResults=50
         ).execute()
         playlists = results['items']
         if len(args) < 1:
@@ -188,14 +191,14 @@ class youtubeCog:
             await self.bot.say(msg)
             return
 
-        #check to see if playlist is in current list of playlists
+        # check to see if playlist is in current list of playlists
         link = "https://www.youtube.com/playlist?list="
         for playlist in playlists:
             if playlist['snippet']['title'].lower() == args[0].lower():
                 await self.bot.say("playlist " + args[0] + ": " + link + playlist['id'])
 
     @commands.command()
-    async def getvid(self,playlistName :str):
+    async def getvid(self, playlistName: str):
         """Gets random video from playlist"""
         playlist = get_playlist(playlistName)
         if playlist is None:
@@ -208,16 +211,16 @@ class youtubeCog:
             maxResults=50
         ).execute()
         playlistItmes = playlist_items_resp['items']
-        if(len(playlistItmes) <=0):
+        if(len(playlistItmes) <= 0):
             await self.bot.say("no videos in playlist")
             return
         vid = random.choice(playlistItmes)
-        link= 'https://www.youtube.com/watch?v='
+        link = 'https://www.youtube.com/watch?v='
         await self.bot.say("video: " + link + vid['contentDetails']['videoId'])
 
     @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
-    async def remove_video(self,playlistName,videoNumber:int):
+    async def remove_video(self, playlistName, videoNumber: int):
         """removes the specified video number(starts at 1) from the playlist. Admin only"""
         if videoNumber < 1:
             await self.bot.say("video number cant be less than 1")
@@ -233,12 +236,13 @@ class youtubeCog:
             maxResults=50
         ).execute()
         playlistItmes = playlist_items_resp['items']
-        if videoNumber > len(playlistItmes) :
+        if videoNumber > len(playlistItmes):
             await self.bot.say("video number greater than number of videos in playlist")
             return
-        to_remove = playlistItmes[videoNumber-1]
+        to_remove = playlistItmes[videoNumber - 1]
         del_resp = youtube.playlistItems().delete(id=to_remove['id']).execute()
         await self.bot.say("removed: " + to_remove['snippet']['title'])
+
 
 def setup(bot):
     bot.add_cog(youtubeCog(bot))

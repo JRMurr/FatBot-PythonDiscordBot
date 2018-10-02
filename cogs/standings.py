@@ -129,7 +129,7 @@ class NHL(League):
     WILDCARD_PLAYOFF_SPOTS = 2  # Number of wildcard teams from each conference
     STANDINGS_URL = 'http://statsapi.web.nhl.com/api/v1/standings'
     OUTPUT_FMT = \
-"""
+        """
 ```
 EASTERN CONFERENCE
     | GP |  W |  L | OTL | PTS

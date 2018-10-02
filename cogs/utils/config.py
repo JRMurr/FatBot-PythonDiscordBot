@@ -1,6 +1,7 @@
-##took from https://github.com/Rapptz/RoboDanny/blob/master/cogs/tags.py 
+# took from https://github.com/Rapptz/RoboDanny/blob/master/cogs/tags.py
 import json
 import asyncio
+
 
 class Config:
     """The "database" object. Internally based on ``json``."""
