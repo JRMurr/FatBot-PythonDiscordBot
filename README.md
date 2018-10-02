@@ -9,6 +9,8 @@ bot has to be run in a terminal to get those setup.
 
 ### Bot setup
 Make sure this as all done in Python 3! So replace pip with pip3 and python with python3 probably.
-1. Install requirements with `pip install -r requirements.txt`
-2. Copy your discord API into config.json, in the field "discord_id".
-3. Run the bot with `python main.py`
+1. Set up your `config.json`. You can look at `config-example.json` for reference
+    1. Copy your Discord bot token into the `"discord_id"` field (you can find/make a bot [here](https://discordapp.com/developers/applications/))
+    2. Copy in any other access tokens you may need
+2. Install docker and docker-compose (Google it)
+3. Run `docker-compose up`
