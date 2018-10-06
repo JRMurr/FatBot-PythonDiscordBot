@@ -11,10 +11,12 @@ LIST_FORMAT = "\n{} - "
 MAX_WHISPER_LENGTH = 1500
 
 # Load all quotes
+
 try:
-    quotes = json.load(open(FILE_NAME))
-except Exception as e:
-    print("Error loading quotes:\n{}".format(e))
+    with open(FILE_NAME) as f:
+        quotes = json.load(f)
+except FileNotFoundError:
+    print(f"Warning: {FILE_NAME} not found")
     quotes = []
 
 
@@ -23,10 +25,8 @@ def setup(bot):
 
 
 def save_quotes():
-    try:
-        json.dump(quotes, open(FILE_NAME, 'w'), indent=4)
-    except Exception as e:
-        print("Error saving quotes")
+    with open(FILE_NAME, 'w') as f:
+        json.dump(quotes, f, indent=4)
 
 
 def format_quote(quote):
@@ -41,19 +41,20 @@ class quotesCog:
 
     @commands.command()
     async def quote(self, *args):
-        selection = quotes  # By default, we select from all quotes
-        # If more words were provided, use them to filter the quotes
+        # If words were provided, use them to filter the quotes
         if args:
             # Filter for a word
             target = ' '.join(args)  # Combine the given words with spaces
-            filtered_quotes = [q for q in quotes if target.lower() in q.lower()]
-
-            # If any quotes matched the filter, select from those, otherwise print a message
-            if filtered_quotes:
-                selection = filtered_quotes
-            else:
-                await self.bot.say("No quotes with that word. I'm giving you random stuff instead.")
-        await self.bot.say(format_quote(random.choice(selection)))
+            selection = [q for q in quotes if target.lower() in q.lower()]
+        else:
+            # Choose from all quotes
+            selection = quotes
+        # If there are any quotes, select from those, otherwise print a message
+        if selection:
+            quote = random.choice(selection)
+            await self.bot.say(format_quote(quote))
+        else:
+            await self.bot.say("No quotes!")
 
     # *args would not give ' " ' character for some reason
     @commands.command(pass_context=True)
