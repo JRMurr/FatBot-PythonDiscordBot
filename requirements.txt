@@ -9,9 +9,15 @@ emoji
 #######youtube#######
 httplib2
 google-api-python-client
+oauth2client
 
 #######standings#######
 requests
 
+#######twitter######
+python-twitter
+
+
 #######last fm#######
 pylast
+Pillow
