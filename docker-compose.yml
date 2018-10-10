@@ -1,9 +1,18 @@
 version: '3'
 
 services:
+  db:
+    image: mongo:latest
+    command: mongod --bind_ip_all
+    ports:
+      - "27017:27017"
+
   fatbot:
     build: ./
     image: fatbot
     tty: true
+    command: bash -c "wait-for-it db:27017 && python main.py"
+    depends_on:
+      - db
     volumes:
       - .:/fatbot:rw
