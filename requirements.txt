@@ -21,3 +21,6 @@ python-twitter
 #######last fm#######
 pylast
 Pillow
+
+#######dev dependencies#######
+pylint
