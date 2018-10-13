@@ -4,3 +4,4 @@ cogs/__pycache__/youtube.cpython-35.pyc
 *.json
 discord.log
 !config-example.json
+venv
