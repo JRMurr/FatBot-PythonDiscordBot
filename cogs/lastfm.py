@@ -205,7 +205,7 @@ class lastFMCog:
                 album = albumns[album_idx].item
                 try:
                     imgUrl = album.get_cover_image(size=4)
-                except pylast.WSError as e:
+                except pylast.WSError:
                     print('caught thing')
                     imgUrl = None
 

@@ -1,6 +1,17 @@
 {
     "cmdPrefix": "!",
     "discord_id": "REPLACE ME",
+    "inital_cogs": [
+        "cogs.imgur",
+        "cogs.youtube",
+        "cogs.twitch",
+        "cogs.twit",
+        "cogs.memes",
+        "cogs.quotes",
+        "cogs.predict",
+        "cogs.standings",
+        "cogs.lastfm"
+    ],
     "imgur_client_id":"REPLACE ME",
     "imgur_client_secret":"REPLACE ME",
     "imgur_access_token" : "REPLACE ME",

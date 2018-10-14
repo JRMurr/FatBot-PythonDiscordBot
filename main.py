@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 from cogs.utils import checks
 from functools import reduce
+from pymongo import MongoClient
+
 import random
 import copy
 import json
@@ -9,6 +11,7 @@ import traceback
 import linecache
 import sys
 import logging
+import datetime
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.CRITICAL)
@@ -16,27 +19,11 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w'
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-initial_extensions = [
-    'cogs.imgur',
-    'cogs.youtube',
-    'cogs.twitch',
-    # 'cogs.test',
-    # 'cogs.twit',
-    'cogs.memes',
-    'cogs.quotes',
-    'cogs.predict',
-    'cogs.standings',
-    'cogs.lastfm'
-]
 try:
     configDict = json.load(open('config.json'))
 except Exception as e:
     configDict = {}
 
-try:
-    aliasDict = json.load(open('alias.json'))
-except Exception as e:
-    aliasDict = {}
 
 description = '''the greatest bot in the world'''
 cmdPrefix = "!"
@@ -74,7 +61,7 @@ except Exception as e:
 
 def getExceptionString():
     traceback.print_exc()
-    exc_type, exc_obj, tb = sys.exc_info()
+    _, exc_obj, tb = sys.exc_info()
     f = tb.tb_frame
     lineno = tb.tb_lineno
     filename = f.f_code.co_filename
@@ -90,11 +77,12 @@ async def on_ready():
     print(bot.user.id)
     print(discord.utils.oauth_url(bot.user.id, discord.Permissions.general()))
     print('------')
-
-    for extension in initial_extensions:
+    bot.mongo_client = MongoClient('db', 27017)
+    bot.db = bot.mongo_client.fatbot
+    for extension in configDict['inital_cogs']:
         try:
             bot.load_extension(extension)
-        except Exception as e:
+        except Exception:
             print("error loading " + extension + "," + getExceptionString())
 
 
@@ -126,9 +114,7 @@ async def alias(ctx):
         # index 1 is the arguments for the command in a string
         newCommand.append(args[0])
         newCommand.append(' '.join(args[1::]))
-        aliasDict.update({name: newCommand})
-        with open('alias.json', 'w') as fp:
-            json.dump(aliasDict, fp, indent=4)
+        bot.db.alias.replace_one({'aliasName': name}, {'aliasName': name, 'command': newCommand}, upsert=True)
         await bot.say("Created alias " + name)
 
 
@@ -165,7 +151,7 @@ async def do_multiple(ctx, numTimes: int, *, command: str):
     if command.startswith("do_multiple"):
         await bot.say("u fukin thought")
         return
-    for i in range(numTimes):
+    for _ in range(numTimes):
         await on_message(msg)
 
 
@@ -178,7 +164,7 @@ async def load(*, module: str):
         module = 'cogs.' + module
     try:
         bot.load_extension(module)
-    except Exception as e:
+    except Exception:
         await bot.say('\U0001f52b')
         await bot.say(getExceptionString())
     else:
@@ -211,7 +197,7 @@ async def reload(*, module: str):
     try:
         bot.unload_extension(module)
         bot.load_extension(module)
-    except Exception as e:
+    except Exception:
         await bot.say('\U0001f52b')
         await bot.say(getExceptionString())
     else:
@@ -261,7 +247,7 @@ async def remove_keyword(keyphrase):
     """removes keyword phrase from keywords"""
     try:
         del keyWords[keyphrase.lower().strip()]
-    except KeyError as e:
+    except KeyError:
         await bot.say("'{}' not in list of keywords".format(keyphrase.strip()))
     else:
         with open('keyWords.json', 'w') as fp:
@@ -324,7 +310,7 @@ def chunks(l, n):
 @bot.command()
 async def alias_list():
     msg = ""
-    for chunk in list(chunks(sorted(list(aliasDict.keys())), 3)):
+    for chunk in list(chunks(sorted(bot.db.alias.distinct('aliasName')), 3)):
         length = len(chunk)
         if length == 3:
             msg += "{} {} {}\n".format(chunk[0].ljust(20), chunk[1].ljust(20), chunk[2].ljust(20))
@@ -363,7 +349,7 @@ async def on_message(message):
         workingMessage.content = message.content[:-4].strip()
 
     if workingMessage.content.startswith(cmdPrefix):
-        botCommands = list(bot.commands.keys()) + list(aliasDict.keys())
+        botCommands = list(bot.commands.keys()) + bot.db.alias.distinct('aliasName')
 
         msg = copy.copy(workingMessage)
         passedCMD = msg.content.split(' ')[0]
@@ -417,14 +403,16 @@ async def on_message(message):
         alias = msg.content.split(' ')[0]
         # remove prefix
         alias = alias[len(cmdPrefix)::]
-        if alias in aliasDict:
-            msg.content = cmdPrefix + aliasDict[alias][0] + " " + aliasDict[alias][1]
+        found_alias = bot.db.alias.find_one({'aliasName': alias})
+        if found_alias:
+            alias_command = found_alias['command']
+            msg.content = cmdPrefix + alias_command[0] + " " + alias_command[1]
             await bot.process_commands(msg)
     elif workingMessage.content.lower().strip() in keyWords:
         response = keyWords[message.content.lower()]
         if type(response) is list:
             response = random.choice(response)
-        print("Sending a response to ".format(workingMessage.content.lower()))
+        print("Sending a response to {}".format(workingMessage.content.lower()))
         await bot.send_message(message.channel, response)
     if deleteMessage:
         await bot.delete_message(message)
