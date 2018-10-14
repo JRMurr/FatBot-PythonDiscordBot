@@ -15,8 +15,10 @@ import datetime
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.CRITICAL)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+handler = logging.FileHandler(
+    filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter(
+    '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
 try:
@@ -53,11 +55,6 @@ try:
 except Exception as e:
     keyWords = {}
 
-try:
-    timeOutUsers = json.load(open('timeOutUsers.json'))
-except Exception as e:
-    timeOutUsers = {}
-
 
 def getExceptionString():
     traceback.print_exc()
@@ -79,6 +76,10 @@ async def on_ready():
     print('------')
     bot.mongo_client = MongoClient('db', 27017)
     bot.db = bot.mongo_client.fatbot
+
+    bot.db.alias.create_index('aliasName', background=True)
+    bot.db.keyWords.create_index('keyWord', background=True)
+
     for extension in configDict['inital_cogs']:
         try:
             bot.load_extension(extension)
@@ -114,7 +115,8 @@ async def alias(ctx):
         # index 1 is the arguments for the command in a string
         newCommand.append(args[0])
         newCommand.append(' '.join(args[1::]))
-        bot.db.alias.replace_one({'aliasName': name}, {'aliasName': name, 'command': newCommand}, upsert=True)
+        bot.db.alias.replace_one({'aliasName': name},
+                                 {'aliasName': name, 'command': newCommand}, upsert=True)
         await bot.say("Created alias " + name)
 
 
@@ -221,18 +223,17 @@ async def add_keyword(key, response):
     """adds keyphrase/response to be checked
 
        "<key>" "<response>"
-       """
-    keyWords.update({key.lower().strip(): response})
-    with open('keyWords.json', 'w') as fp:
-        json.dump(keyWords, fp, indent=4)
-    await bot.say("added key '{}' with response '{}'".format(key.lower(), response))
+    """
+    bot.db.keyWords.replace_one({'keyWord': key},
+                                 {'keyWord': key, 'response': response}, upsert=True)
+    await bot.say("added key '{}' with response '{}'".format(key, response))
 
 
 @bot.command()
 async def list_keywords():
     msg = "keys:"
     i = 0
-    for key in keyWords.keys():
+    for key in bot.db.keyWords.distinct('keyWord'):
         msg = msg + '\n' + str(i) + ": " + str(key)
         i += 1
         if len(msg) >= 1500:
@@ -245,14 +246,10 @@ async def list_keywords():
 @checks.admin_or_permissions(manage_roles=True)
 async def remove_keyword(keyphrase):
     """removes keyword phrase from keywords"""
-    try:
-        del keyWords[keyphrase.lower().strip()]
-    except KeyError:
-        await bot.say("'{}' not in list of keywords".format(keyphrase.strip()))
-    else:
-        with open('keyWords.json', 'w') as fp:
-            json.dump(keyWords, fp, indent=4)
+    if bot.db.keyWords.find_one_and_delete({'keyWord': keyphrase}):
         await bot.say("removed: " + keyphrase)
+    else:
+        await bot.say("'{}' not in list of keywords".format(keyphrase.strip()))
 
 
 @bot.command()
@@ -276,28 +273,29 @@ async def channel_whitelist(ctx, isWhitelist: bool):
         json.dump(whiteListedChannels, fp, indent=4)
 
 
-@bot.group(pass_context=True)
-@checks.admin_or_permissions(kick_members=True)
-async def timeout(ctx):
-    """Timeout command group"""
-    if ctx.invoked_subcommand is None:
-        await bot.say("use {}help timeout".format(bot.command_prefix))
+# @bot.group(pass_context=True)
+# @checks.admin_or_permissions(kick_members=True)
+# async def timeout(ctx):
+#     """Timeout command group"""
+#     if ctx.invoked_subcommand is None:
+#         await bot.say("use {}help timeout".format(bot.command_prefix))
 
 
-@timeout.command(pass_context=True)
-@checks.admin_or_permissions(kick_members=True)
-async def set_length(ctx, timeOutLength: int):
-    """Usage: timeout set_length <length in min> <@mention of user(s) to timeout>
+# @timeout.command(pass_context=True)
+# @checks.admin_or_permissions(kick_members=True)
+# async def set_length(ctx, timeOutLength: int):
+#     """Usage: timeout set_length <length in min> <@mention of user(s) to timeout>
 
-        When a user is in timeout, their current messages will stay but all new
-        messages during the timeout will be deleted.
-        (There may be a delay when the server is under a high load)
-    """
-    message = ctx.message
-    for user in message.mentions:
-        # save the end of the timeout
-        timeOutUsers[user] = message.timestamp + datetime.timedelta(minutes=timeOutLength)
-    await bot.say("{}".format(timeOutUsers))
+#         When a user is in timeout, their current messages will stay but all new
+#         messages during the timeout will be deleted.
+#         (There may be a delay when the server is under a high load)
+#     """
+#     message = ctx.message
+#     for user in message.mentions:
+#         # save the end of the timeout
+#         timeOutUsers[user] = message.timestamp + \
+#             datetime.timedelta(minutes=timeOutLength)
+#     await bot.say("{}".format(timeOutUsers))
 
 
 # https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
@@ -313,7 +311,8 @@ async def alias_list():
     for chunk in list(chunks(sorted(bot.db.alias.distinct('aliasName')), 3)):
         length = len(chunk)
         if length == 3:
-            msg += "{} {} {}\n".format(chunk[0].ljust(20), chunk[1].ljust(20), chunk[2].ljust(20))
+            msg += "{} {} {}\n".format(chunk[0].ljust(20),
+                                       chunk[1].ljust(20), chunk[2].ljust(20))
         elif length == 2:
             msg += "{} {}\n".format(chunk[0].ljust(20), chunk[1].ljust(20))
         else:
@@ -338,8 +337,8 @@ async def on_message(message):
     if message.author == bot.user:
         return
     if respondToOwner \
-        and checks.is_owner_check(message) \
-        and workingMessage.content.startswith(cmdPrefix):
+            and checks.is_owner_check(message) \
+            and workingMessage.content.startswith(cmdPrefix):
         await bot.send_message(message.channel, random.choice(ownerResponses))
 
     currentTime = message.timestamp
@@ -349,7 +348,8 @@ async def on_message(message):
         workingMessage.content = message.content[:-4].strip()
 
     if workingMessage.content.startswith(cmdPrefix):
-        botCommands = list(bot.commands.keys()) + bot.db.alias.distinct('aliasName')
+        botCommands = list(bot.commands.keys()) + \
+            bot.db.alias.distinct('aliasName')
 
         msg = copy.copy(workingMessage)
         passedCMD = msg.content.split(' ')[0]
@@ -408,12 +408,14 @@ async def on_message(message):
             alias_command = found_alias['command']
             msg.content = cmdPrefix + alias_command[0] + " " + alias_command[1]
             await bot.process_commands(msg)
-    elif workingMessage.content.lower().strip() in keyWords:
-        response = keyWords[message.content.lower()]
-        if type(response) is list:
-            response = random.choice(response)
-        print("Sending a response to {}".format(workingMessage.content.lower()))
-        await bot.send_message(message.channel, response)
+    else: 
+        possible_keyword = workingMessage.content.lower().strip()
+        found_keyPhrase = bot.db.keyWords.find_one({'keyWord': possible_keyword})
+        if found_keyPhrase:
+            response = found_keyPhrase['response']
+            if type(response) is list:
+                response = random.choice(response)
+            await bot.send_message(message.channel, response)
     if deleteMessage:
         await bot.delete_message(message)
 
